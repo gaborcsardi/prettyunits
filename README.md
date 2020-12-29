@@ -5,11 +5,13 @@
 [![Windows Build status](https://ci.appveyor.com/api/projects/status/github/r-lib/prettyunits?svg=true)](https://ci.appveyor.com/project/gaborcsardi/prettyunits)
 [![CRAN RStudio mirror downloads](http://cranlogs.r-pkg.org/badges/prettyunits)](https://CRAN.R-project.org/package=prettyunits)
 
-
 # prettyunits
 
 The `prettyunits` package formats quantities in human readable form. Currently
-time units and information (i.e. bytes) are supported.
+- time units 
+- information (i.e. bytes) 
+- linear quantities (i.e. like quantities representing distance, but not surface or volume)
+are supported.
 
 ## Installation
 
@@ -97,6 +99,128 @@ uls()
 ##>     644 gaborcsardi staff  2.95 kB 2019-03-27 09:58:43 README.Rmd
 ```
 
+## Quantities
+
+`pretty_num` formats number related to linear quantities in a human readable way:
+
+```r
+pretty_num(1337)
+```
+
+```
+##> [1] "1.34 k"
+```
+
+```r
+pretty_num(-133337)
+```
+
+```
+##> [1] "-133.34 k"
+```
+
+```r
+pretty_num(1333.37e-9)
+```
+
+```
+##> [1] "1.33 µ"
+```
+Be aware that the result is wrong in case of surface or volumes, and for any non-linear quantity.
+
+Here is a simple example of how to prettify a entire tibble
+
+```r
+library(tidyverse)
+tdf <- tribble( ~name, ~`size in m`, ~`speed in m/s`,
+                "land snail", 0.075, 0.001,
+                "photon", NA,  299792458,
+                "African plate", 10546330, 0.000000000681)
+tdf %>% mutate(across(where(is.numeric), pretty_num))
+```
+
+```
+##> # A tibble: 3 x 3
+##>   name          `size in m` `speed in m/s`
+##>   <chr>         <chr>       <chr>         
+##> 1 land snail    "   75 m"   "     1 m"    
+##> 2 photon        "    NA "   "299.79 M"    
+##> 3 African plate "10.55 M"   "   681 p"
+```
+You may want to use non-breakable space so that the unit prefix is never separated from the number in space constrained situation like text hover or text labels:
+
+```r
+pretty_num(1333.37e-9 , sep = "\xC2\xA0")
+```
+
+```
+##> [1] "1.33 µ"
+```
+
+
+### Quantitiies of class `units`
+
+`pretty_num` loosely preserves units associated with a quantity: 
+
+```r
+library(units)
+```
+
+```
+##> Warning: package 'units' was built under R version 3.6.2
+```
+
+```
+##> udunits system database from /Library/Frameworks/R.framework/Versions/3.6/Resources/library/units/share/udunits
+```
+
+```r
+l_cm <- set_units(1337129, cm)
+pretty_num(l_cm)
+```
+
+```
+##> [1] "1.34 M [cm]"
+```
+So it is up to you to turn the unit into the right [base-unit](https://en.wikipedia.org/wiki/SI_base_unit)
+
+If you do so, then the best prefix is potentially moved to the units : 
+
+```r
+pretty_num(l_cm %>% set_units(m))
+```
+
+```
+##> [1] "13.37 [km]"
+```
+
+If you try non-linear units, you should get an error:
+```
+surface <- set_units(1337129, "m2")
+pretty_num(surface)
+```
+```
+##> Error in compute_num(number) : pretty_num() doesn't handle non-linear units
+```
+
+This can be used for an entire data-frame as well
+
+```r
+names(tdf) <- c( "name", "size", "speed" )
+units(tdf$size) <- "m"
+units(tdf$speed) <- "m/s"
+tdf %>% mutate(across(where(is.numeric), pretty_num))
+```
+
+```
+##> # A tibble: 3 x 3
+##>   name          size          speed           
+##>   <chr>         <chr>         <chr>           
+##> 1 land snail    "   75 m [m]" "     1 m [m/s]"
+##> 2 photon        "    NA  [m]" "299.79 M [m/s]"
+##> 3 African plate "10.55 M [m]" "   681 p [m/s]"
+```
+
 ## Time intervals
 
 `pretty_ms` formats a time interval given in milliseconds. `pretty_sec` does
@@ -109,8 +233,7 @@ pretty_ms(c(1337, 13370, 133700, 1337000, 1337000000))
 ```
 
 ```
-##> [1] "1.3s"            "13.4s"           "2m 13.7s"        "22m 17s"        
-##> [5] "15d 11h 23m 20s"
+##> [1] "1.3s"            "13.4s"           "2m 13.7s"        "22m 17s"         "15d 11h 23m 20s"
 ```
 
 ```r
@@ -127,8 +250,7 @@ pretty_sec(c(1337, 13370, 133700, 1337000, 13370000))
 ```
 
 ```
-##> [1] "22m 17s"          "3h 42m 50s"       "1d 13h 8m 20s"   
-##> [4] "15d 11h 23m 20s"  "154d 17h 53m 20s"
+##> [1] "22m 17s"          "3h 42m 50s"       "1d 13h 8m 20s"    "15d 11h 23m 20s"  "154d 17h 53m 20s"
 ```
 
 ```r

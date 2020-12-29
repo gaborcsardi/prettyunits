@@ -1,6 +1,12 @@
 
 # development version
 
+* `pretty_num()` is added with all the [BIPM](https://www.bipm.org) agreed unit prefix 
+  it handles numeric values and vector, as well as `units` class entries. 
+  
+* `sep ` option now allows to switch to non-breaking space separator according to 
+  BIPM SI Brochure recommendation.
+
 # 1.1.1
 
 * Fix spurious zero fractions in `pretty_bytes()` when formatting
